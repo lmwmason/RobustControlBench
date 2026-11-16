@@ -1,0 +1,11 @@
+mass_kg = 10.0
+specific_heat_j_per_kg_k = 4180.0
+heat_transfer_w_per_k = 35.0
+ambient_c = 20.0
+sample_period_s = 1.0
+initial_c = 20.0
+reference_c = 50.0
+duration_s = 3600.0
+minimum_power_w = -2000.0
+maximum_power_w = 3000.0
+

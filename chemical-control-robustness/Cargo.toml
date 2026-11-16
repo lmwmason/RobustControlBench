@@ -1,0 +1,21 @@
+[package]
+name = "chemical-control-robustness"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Reproducible robustness comparison of PID, LQR, and LQI thermal controllers"
+
+[dependencies]
+anyhow = "1"
+csv = "1"
+nalgebra = "0.34"
+plotters = "0.3"
+rand = "0.9"
+rand_chacha = "0.9"
+rand_distr = "0.5"
+serde = { version = "1", features = ["derive"] }
+toml = "0.9"
+
+[dev-dependencies]
+tempfile = "3"
+
