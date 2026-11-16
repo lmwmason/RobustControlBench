@@ -1,0 +1,5 @@
+\section{Introduction}\label{sec:introduction}
+Controller rankings can reflect tuning effort, reference handling, sensing, or actuator plumbing rather than controller structure. This is especially important when a non-integral LQR tracker is compared with PID and LQI under an unknown constant load. The present work is an audited, simulation-only study of that problem. It preserves a negative result from the audit: the original restricted-actuator ranking was invalid because integral controllers did not receive the actual limits. Correcting that defect reversed the reported winner.
+
+The questions are how bounded thermal-capacity and heat-transfer uncertainty affect performance, when rankings change, how integral action affects load rejection, how saturation and noise alter conclusions, and which stability claims can be proved rather than inferred. The work contributes a deterministic Rust benchmark, equal-budget tuning with separated training/validation/test scenarios, analytical and independent numerical checks, a low-order interval stability certificate, and a modest higher-fidelity delayed-sensor simulation. It does not propose a new control law.
+

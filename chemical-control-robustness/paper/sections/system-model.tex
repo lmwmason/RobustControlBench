@@ -1,0 +1,24 @@
+\section{System Model}\label{sec:model}
+For a homogeneous, non-reactive solution, energy conservation gives
+\begin{equation}
+m c_p \dot T=Q-UA(T-T_a)+d, \label{eq:energy}
+\end{equation}
+where $d$ is external thermal power in watts; negative $d$ removes heat. Every term in \cref{eq:energy} has units of watts. The illustrative assumptions are $m=\SI{10}{kg}$, $c_p=\SI{4180}{J.kg^{-1}.K^{-1}}$, $UA=\SI{35}{W.K^{-1}}$, and $T_a=\SI{20}{\celsius}$. They are water-like modeling choices, not measurements.
+
+With $x=T-T_a$, $C_{\rm th}=mc_p$, $u=Q$, and $y=x$,
+\begin{equation}
+\dot x=Ax+Bu+Ed,\quad A=-\frac{UA}{C_{\rm th}},\quad B=E=\frac{1}{C_{\rm th}}. \label{eq:ss}
+\end{equation}
+For held inputs over $h=\SI{1}{s}$,
+\begin{equation}
+A_d=e^{Ah},\qquad B_d=\frac{e^{Ah}-1}{A}B,\qquad E_d=\frac{e^{Ah}-1}{A}E. \label{eq:zoh}
+\end{equation}
+For constant $w=Q+d$, the independent analytical solution is
+\begin{equation}
+T(t)=T_a+\frac{w}{UA}+\left[T(0)-T_a-\frac{w}{UA}\right]e^{-UA t/C_{\rm th}}. \label{eq:analytic}
+\end{equation}
+Equilibrium requires $Q+d=UA(T-T_a)$. Capacity and $UA$ vary independently by $\pm30\%$; ambient changes are additive in degrees Celsius, not percentage changes on an affine scale.
+
+\subsection{Higher-fidelity simulated plant}
+The primary benchmark remains \cref{eq:ss}. A secondary plant retains exact fluid propagation but introduces a first-order sensor state with time constant \SI{20}{s} and a pure \SI{10}{s} sampled measurement delay. This small extension isolates sensitivity to omitted sensing dynamics without adding reaction kinetics or arbitrary plant order.
+

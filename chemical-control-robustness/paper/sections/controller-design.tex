@@ -1,0 +1,20 @@
+\section{Controller Design}\label{sec:controllers}
+The PID implementation uses derivative-on-measurement, a first-order derivative filter, output saturation, and back-calculation anti-windup. The stored integral and filtered derivative are updated at \SI{1}{s}; actual scenario limits are authoritative.
+
+LQR minimizes
+\begin{equation}
+J=\sum_{k=0}^{\infty}(x_k^{\mathsf T}Qx_k+u_k^{\mathsf T}Ru_k), \label{eq:lqcost}
+\end{equation}
+with feedback gain from the discrete algebraic Riccati equation. Tracking uses nominal equilibrium feedforward,
+$u=UA_0(r-T_{a0})-K(x-r)$; therefore plain LQR is not expected to reject an unknown constant load without offset.
+
+LQI augments the state by
+\begin{align}
+z_{k+1}&=z_k+h(r_k-y_k),\nonumber\\
+u_k&=UA_0(r-T_{a0})-K_x(x_k-r)-K_z z_k. \label{eq:lqi}
+\end{align}
+The command uses $z_k$ before storing $z_{k+1}$, matching synthesis. The augmented controllability determinant is $-hB_d^2\ne0$.
+
+Original PID gains are $(420,2,1200)$, LQR weights $(Q,R)=(1,2\times10^{-5})$, and LQI weights $(Q_x,Q_z,R)=(1,8\times10^{-4},2\times10^{-5})$. Retuned parameters are generated automatically in \cref{tab:tuned}.
+\begin{table}[!htbp]\centering\caption{Equal-budget parameters: PID $(K_p,K_i,K_d)$, LQR $(Q,R)$, and LQI $(Q_x,Q_z,R)$.}\label{tab:tuned}\resizebox{\linewidth}{!}{\input{tables/tuned-parameters.tex}}\end{table}
+

@@ -1,0 +1,9 @@
+\section{Numerical Verification}\label{sec:validation}
+Exact ZOH trajectories agree with \cref{eq:analytic} for sample periods $0.1$, $1$, $7.5$, and \SI{60}{s} over 100 steps within $2\times10^{-11}$ degrees Celsius. Thermal equilibrium and positivity are tested.
+
+For the scalar DARE, the iterative result is checked against the positive root of
+\begin{equation}
+b^2P^2+[R(1-a^2)-Qb^2]P-QR=0. \label{eq:scalar-dare}
+\end{equation}
+Iteration requires update norm below $10^{-13}$ and residual below $10^{-8}$. LQI eigenvalues are independently reconstructed from the closed-form quadratic roots. Fifteen automated tests cover analytical propagation, Riccati calculations, poles, interval certificates, anti-windup, metric quadrature, finite values, CSV integrity, delayed-sensor behavior, and seeded reproduction.
+

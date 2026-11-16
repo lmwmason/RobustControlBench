@@ -1,0 +1,10 @@
+\section{Experimental Methodology}\label{sec:methods}
+All controllers use identical measured temperature, \SI{1}{s} sampling, \SI{3600}{s} horizon, initial/reference temperatures of \SI{20}{\celsius}/\SI{50}{\celsius}, and nominal limits $[-2000,3000]$ W. Test scenarios cover isolated seven-level parameter sweeps, three combined cases, a $-\SI{700}{W}$ step at \SI{1800}{s}, $\sigma=\SI{0.15}{\celsius}$ Gaussian measurement noise, and restricted limits $[-500,1200]$ W.
+
+\subsection{Equal-budget tuning}
+Each controller receives 64 deterministic low-discrepancy candidates. PID searches $K_p\in[100,1200]$, $K_i\in[0.2,12]$, $K_d\in[0,3000]$; LQR searches $Q\in[0.05,20]$, $R\in[10^{-7},2\times10^{-3}]$; LQI searches $Q_x\in[0.05,20]$, $Q_z\in[10^{-5},2\times10^{-2}]$, and the same $R$ interval. Log scaling is used except for $K_d$. All candidates share nominal tracking, a $-\SI{350}{W}$ load, and a warm-start scenario. The best eight training candidates per controller enter four identical $\pm15\%$ validation cases. Validation selects once; no held-out test result changes selection.
+
+The objective is normalized IAE plus twice absolute tail error, $0.15$ times saturation fraction, and $0.05$ times normalized RMS control. Equal counts constrain computational effort but do not make two- and three-dimensional search difficulty equivalent.
+
+Metrics use $N$ held intervals for $N+1$ endpoint samples. Noise analysis uses 100 independent ChaCha8 streams with seeds $20261116+i$; controller comparisons are paired by seed. Confidence intervals use replicate differences and $t_{99}=1.984$. Statistical detectability is reported separately from practical magnitude.
+

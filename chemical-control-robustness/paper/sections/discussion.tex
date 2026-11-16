@@ -1,0 +1,9 @@
+\section{Discussion}\label{sec:discussion}
+The revised evidence separates controller structure from tuning. Original LQI leads nominal tracking and load rejection; equal-budget tuning lets LQR lead the nominal comparison, mainly by selecting very high feedback authority. That advantage is conditional: delayed sensing causes sustained saturation and removes the nominal benefit. Integral action reliably rejects feasible constant thermal loads, but LQI is not uniformly best under noise, saturation, or unmodeled dynamics.
+
+The anti-windup correction is scientifically material. Before correction, PID/LQI integrated against nominal limits while the plant used tighter limits. The corrected result does not support the earlier hypothesis that the restricted actuator makes original LQR best. With retuned gains, LQR narrowly leads the restricted IAE, but differences are practically small and saturation dominates all controllers.
+
+Equal candidate counts and identical scenarios improve fairness but do not equalize optimization difficulty: LQR has two searched weights, PID and LQI have three, and their parameter-to-response maps differ. The result is best viewed as a controlled finite-budget comparison. Likewise, statistical confidence under independent Gaussian realizations quantifies Monte Carlo precision, not uncertainty in real sensor physics or plant parameters.
+
+The chemical role is intentionally limited. The model expresses solution heat capacity, heat transfer, and thermal equilibrium for a non-reactive liquid. No claim is made about reactor kinetics, concentration, industrial equipment, or laboratory validation.
+

@@ -1,0 +1,43 @@
+\documentclass[10pt,a4paper,twocolumn]{article}
+\usepackage[margin=19mm,top=22mm,bottom=22mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{array,booktabs,float,xcolor,url,microtype,balance,placeins}
+\usepackage{fancyhdr,caption,siunitx}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={Robustness and Performance Trade-offs of PID, LQR, and LQI Controllers Under Parametric Uncertainty in a Simulated Thermal Process},pdfauthor={Mu-Won Lee},pdfsubject={Simulation-only comparative control study},pdfkeywords={PID, LQR, LQI, thermal process, parametric uncertainty}}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage[backend=biber,style=numeric-comp,sorting=none,maxbibnames=6]{biblatex}
+\addbibresource{references.bib}
+\captionsetup{font=small,labelfont=bf}
+\setlength{\columnsep}{7mm}\setlength{\parindent}{1em}\setlength{\parskip}{0pt}\setlength{\headheight}{13pt}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\footnotesize PID, LQR, and LQI Under Thermal-Process Uncertainty}
+\fancyhead[R]{\footnotesize Computational Study, 2026}
+\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0.3pt}\renewcommand{\footrulewidth}{0pt}
+\sisetup{detect-all,per-mode=symbol}
+\begin{document}
+\twocolumn[{
+\begin{center}
+{\LARGE\bfseries Robustness and Performance Trade-offs of PID, LQR, and LQI Controllers Under Parametric Uncertainty in a Simulated Thermal Process\par}
+\vspace{0.9em}{\large Mu-Won Lee\par}\vspace{0.3em}
+{\normalsize Chungbuk Science High School, Cheongju, Republic of Korea\par}
+{\small \href{mailto:lmw.hpc@gmail.com}{lmw.hpc@gmail.com}\par}\vspace{1.1em}
+\begin{minipage}{0.94\textwidth}\input{sections/abstract}\end{minipage}
+\end{center}\vspace{1.3em}
+}]
+\input{sections/introduction}
+\input{sections/related-work}
+\input{sections/system-model}
+\input{sections/controller-design}
+\input{sections/methodology}
+\input{sections/numerical-validation}
+\input{sections/results}
+\input{sections/stability-analysis}
+\input{sections/discussion}
+\input{sections/limitations}
+\input{sections/conclusion}
+\printbibliography
+\end{document}
