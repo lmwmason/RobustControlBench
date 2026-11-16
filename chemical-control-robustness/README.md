@@ -29,6 +29,7 @@ cargo fmt --all -- --check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test --all-targets
 cargo run --release -- run-all
+make -C paper
 ```
 
 Configurations are in `configs/`. The last command deterministically regenerates `results/data`, `results/figures`, and `results/summaries`. Rust is the only project implementation language.
@@ -37,5 +38,5 @@ Configurations are in `configs/`. The last command deterministically regenerates
 
 `results/data/metrics.csv` contains every scenario/controller metric. Nominal traces are separate CSVs, nine publication-ready SVGs are under `results/figures`, and noise statistics are under `results/summaries`. See the [audited manuscript](paper/manuscript.md), [scientific audit](docs/audit/scientific-audit.md), and [reproducibility record](docs/reproducibility.md). The earlier final report is retained as a pre-audit historical artifact; its saturation ranking is superseded.
 
-The vessel is perfectly mixed, properties are constant, transport delay and actuator dynamics are absent, uncertainty is structured and bounded, and tuning is intentionally modest. A bounded finite simulation is not a proof of nonlinear or real-world stability.
+The primary vessel is perfectly mixed with constant properties. A secondary simulated plant adds a 20 s sensor lag and 10 s measurement delay. Equal-budget tuning uses 64 candidates per controller with separate training, validation, and held-out tests. A bounded finite simulation is not a proof of nonlinear or real-world stability; interval certificates apply only to the stated unsaturated LQR/LQI models.
 
