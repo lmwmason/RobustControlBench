@@ -1,5 +1,8 @@
 use chemical_control_robustness::{
-    analysis::validation::{scalar_dare_closed_form, scalar_lqr_gain, two_by_two_eigenvalues},
+    analysis::{
+        robustness::{IntervalCertificate, subdivided_lqi_certificate},
+        validation::{scalar_dare_closed_form, scalar_lqr_gain, two_by_two_eigenvalues},
+    },
     controllers::{Controller, LqiController, LqrController, PidController, lqr::solve_dare},
     model::ThermalParameters,
 };
@@ -118,4 +121,53 @@ fn controllers_respect_saturation_and_pid_recovers() {
         assert_eq!(pid.command(50.0, 0.0), 100.0);
     }
     assert!(pid.command(0.0, 50.0) < 0.0);
+}
+
+#[test]
+fn interval_certificates_prove_lqr_and_lqi_stability() {
+    let p = nominal();
+    let d = p.discretize();
+    let lqr = LqrController::design(
+        d.state_factor,
+        d.input_factor,
+        1.0,
+        0.00002,
+        p.heat_transfer_w_per_k,
+        p.ambient_c,
+        p.minimum_power_w,
+        p.maximum_power_w,
+    )
+    .unwrap();
+    let lqi = LqiController::design(
+        d.state_factor,
+        d.input_factor,
+        p.sample_period_s,
+        1.0,
+        0.0008,
+        0.00002,
+        p.heat_transfer_w_per_k,
+        p.ambient_c,
+        p.minimum_power_w,
+        p.maximum_power_w,
+    )
+    .unwrap();
+    let interval = IntervalCertificate::thermal(
+        p.sample_period_s,
+        p.capacity_j_per_k(),
+        p.heat_transfer_w_per_k,
+    );
+    assert!(interval.lqr_margin(lqr.gain()) > 0.0);
+    let gains = lqi.gains();
+    assert!(
+        subdivided_lqi_certificate(
+            p.sample_period_s,
+            p.capacity_j_per_k(),
+            p.heat_transfer_w_per_k,
+            gains.0,
+            gains.1,
+            128
+        )
+        .iter()
+        .all(|margin| *margin > 0.0)
+    );
 }

@@ -1,0 +1,11 @@
+uncertainty_domain=capacity:[0.7,1.3]*nominal, heat_transfer:[0.7,1.3]*nominal
+a_interval=[0.998446184499799,0.999549236699767]
+b_interval=[0.000018394947673,0.000034162045678]
+lqr_unit_circle_margin=0.003960740329079
+lqi_jury_margin_1=0.000031885118315
+lqi_jury_margin_2=3.947502765367006
+lqi_jury_margin_3=0.013696770124103
+lqr_certified=true
+lqi_certified=true
+pid_certified=false
+pid_note=The fourth-order interval characteristic polynomial retains dependent coefficients; only numerical grid evidence is claimed.
