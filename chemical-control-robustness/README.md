@@ -35,7 +35,7 @@ Configurations are in `configs/`. The last command deterministically regenerates
 
 ## Outputs and limitations
 
-`results/data/metrics.csv` contains every scenario/controller metric. Nominal traces are separate CSVs, nine publication-ready SVGs are under `results/figures`, and noise statistics are under `results/summaries`. See [the final report](docs/final-report.md) for findings.
+`results/data/metrics.csv` contains every scenario/controller metric. Nominal traces are separate CSVs, nine publication-ready SVGs are under `results/figures`, and noise statistics are under `results/summaries`. See the [audited manuscript](paper/manuscript.md), [scientific audit](docs/audit/scientific-audit.md), and [reproducibility record](docs/reproducibility.md). The earlier final report is retained as a pre-audit historical artifact; its saturation ranking is superseded.
 
 The vessel is perfectly mixed, properties are constant, transport delay and actuator dynamics are absent, uncertainty is structured and bounded, and tuning is intentionally modest. A bounded finite simulation is not a proof of nonlinear or real-world stability.
 

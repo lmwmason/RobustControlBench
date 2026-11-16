@@ -1,5 +1,7 @@
 # Robustness Analysis of PID, LQR, and LQI Controllers Under Model Uncertainty in a Chemical Thermal System
 
+> **Historical pre-audit report.** This document records the original study at commit `26e11de`. Its saturation result is invalid because controller anti-windup used nominal rather than restricted actuator limits, and its disturbance IAE mixed startup with recovery. Use `paper/manuscript.md` for corrected evidence.
+
 ## Abstract
 
 This reproducible Rust simulation compares PID, discrete LQR, and discrete LQI temperature control for a non-reactive, well-mixed liquid vessel. Frozen nominal controllers were tested under ±30% isolated parameter changes, thermal-load disturbance, measurement noise, actuator restriction, and three combined uncertainties. Under nominal assumptions, LQI produced the lowest IAE (7303 °C·s) and RMSE (6.208 °C), followed closely by PID; LQR was slower and retained offsets under unmodeled heat loads. No controller dominated every metric: restricted-actuator IAE favored LQR, while integral controllers best removed persistent disturbance error. These are simulated findings, not experimental validation.
