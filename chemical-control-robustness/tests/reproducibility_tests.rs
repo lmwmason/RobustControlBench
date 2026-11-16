@@ -66,3 +66,39 @@ fn csv_rows_are_consistent() {
     let rows = csv::Reader::from_path(path).unwrap().records().count();
     assert_eq!(rows, result.records.len());
 }
+
+#[test]
+fn delayed_sensor_simulation_is_reproducible() {
+    use chemical_control_robustness::simulation::higher_fidelity::simulate_sensor_dynamics;
+    let p: ThermalParameters =
+        chemical_control_robustness::read_toml("configs/nominal.toml").unwrap();
+    let make = || {
+        PidController::new(
+            420.0,
+            2.0,
+            1200.0,
+            15.0,
+            0.02,
+            p.sample_period_s,
+            p.minimum_power_w,
+            p.maximum_power_w,
+        )
+    };
+    let config = SimulationConfig {
+        disturbance: Disturbance::None,
+        measurement_noise_std_c: 0.1,
+        seed: 99,
+    };
+    let (mut left, mut right) = (make(), make());
+    let a = simulate_sensor_dynamics(&p, &mut left, config, 20.0, 10.0);
+    let b = simulate_sensor_dynamics(&p, &mut right, config, 20.0, 10.0);
+    assert!(
+        a.records
+            .iter()
+            .zip(&b.records)
+            .all(
+                |(x, y)| x.true_temperature_c.to_bits() == y.true_temperature_c.to_bits()
+                    && x.measured_temperature_c.to_bits() == y.measured_temperature_c.to_bits()
+            )
+    );
+}
