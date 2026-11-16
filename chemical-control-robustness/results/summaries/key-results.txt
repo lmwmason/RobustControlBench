@@ -1,0 +1,3 @@
+PID: IAE 7584.23 °C·s, RMSE 6.226 °C, settling 600 s
+LQR: IAE 8068.31 °C·s, RMSE 6.271 °C, settling 837 s
+LQI: IAE 7303.42 °C·s, RMSE 6.208 °C, settling 517 s

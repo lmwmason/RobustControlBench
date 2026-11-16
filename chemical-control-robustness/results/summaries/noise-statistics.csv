@@ -1,0 +1,4 @@
+controller,mean_rmse_c,standard_deviation_rmse_c
+LQI,6.20755578,0.00004219
+LQR,6.27147306,0.00025637
+PID,6.22676929,0.00034917
