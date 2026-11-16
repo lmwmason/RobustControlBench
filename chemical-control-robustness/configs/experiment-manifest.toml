@@ -1,20 +1,20 @@
 protocol_version = 2
-design_freeze = "Controller parameters in controllers.toml are fixed before evaluation."
+design_freeze = "Each controller is selected from an equal 64-candidate budget using training and validation only; selected parameters are frozen before held-out evaluation."
 
 [training]
-scenarios = ["nominal_reference_step"]
-purpose = "Original engineering tuning and basic feasibility only; no test scenarios are used."
+scenarios = ["nominal_reference_step", "minus_350_watt_load", "warm_start"]
+purpose = "Identical deterministic training scenarios for every candidate."
 
 [validation]
-scenarios = ["gain_scale_0.8", "gain_scale_1.2"]
-purpose = "Local tuning sensitivity; no candidate is selected from these results."
+scenarios = ["capacity_minus_15_percent", "capacity_plus_15_percent", "heat_transfer_minus_15_percent", "heat_transfer_plus_15_percent"]
+purpose = "The best eight training candidates per controller are compared; one is selected before tests."
 
 [test]
-scenarios = ["capacity_grid", "heat_transfer_grid", "constant_load", "measurement_noise_100_paired_seeds", "restricted_actuator", "combined_uncertainty"]
+scenarios = ["capacity_grid_30_percent", "heat_transfer_grid_30_percent", "minus_700_watt_load", "measurement_noise_100_paired_seeds", "restricted_actuator", "combined_uncertainty", "sensor_lag_and_delay"]
 purpose = "Final reporting with frozen controller parameters."
 
 [hypotheses]
 h1 = "Integral-action controllers reduce post-disturbance steady-state error relative to nominal-feedforward LQR when no actuator limit prevents equilibrium."
 h2 = "Over the specified ±30% one-at-a-time grid, thermal-capacity uncertainty changes RMSE more than heat-transfer uncertainty."
-h3 = "Restricted actuator limits can change the controller ranking observed under nominal limits."
+h3 = "Restricted actuator limits can change the controller ranking observed under nominal limits; this is evaluated rather than assumed."
 

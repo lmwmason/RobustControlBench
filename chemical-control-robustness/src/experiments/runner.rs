@@ -1,8 +1,12 @@
 use super::scenarios::ExperimentsConfig;
+use super::tuning::{format_selected, tune_equal_budget};
 use crate::{
     analysis::{
         Metrics, compute_metrics,
-        robustness::{StabilityRow, lqi_radius, lqr_radius, pid_radius},
+        robustness::{
+            IntervalCertificate, StabilityRow, lqi_radius, lqr_radius, pid_radius,
+            subdivided_lqi_certificate,
+        },
         statistics::{mean, paired_summary, sample_standard_deviation},
     },
     controllers::{LqiController, LqrController, PidController},
@@ -12,36 +16,39 @@ use crate::{
         csv::{self, MetricRow},
     },
     read_toml,
-    simulation::{SimulationConfig, SimulationResult, disturbances::Disturbance, engine::simulate},
+    simulation::{
+        SimulationConfig, SimulationResult, disturbances::Disturbance, engine::simulate,
+        higher_fidelity::simulate_sensor_dynamics,
+    },
 };
 use anyhow::Result;
 use serde::Deserialize;
 use std::{collections::BTreeMap, fs, path::Path};
 
 #[derive(Clone, Deserialize)]
-struct ControllerConfig {
-    pid: PidConfig,
-    lqr: LqrConfig,
-    lqi: LqiConfig,
+pub(crate) struct ControllerConfig {
+    pub(crate) pid: PidConfig,
+    pub(crate) lqr: LqrConfig,
+    pub(crate) lqi: LqiConfig,
 }
 #[derive(Clone, Deserialize)]
-struct PidConfig {
-    kp: f64,
-    ki: f64,
-    kd: f64,
-    derivative_filter_s: f64,
-    anti_windup_gain: f64,
+pub(crate) struct PidConfig {
+    pub(crate) kp: f64,
+    pub(crate) ki: f64,
+    pub(crate) kd: f64,
+    pub(crate) derivative_filter_s: f64,
+    pub(crate) anti_windup_gain: f64,
 }
 #[derive(Clone, Deserialize)]
-struct LqrConfig {
-    state_weight: f64,
-    input_weight: f64,
+pub(crate) struct LqrConfig {
+    pub(crate) state_weight: f64,
+    pub(crate) input_weight: f64,
 }
 #[derive(Clone, Deserialize)]
-struct LqiConfig {
-    state_weight: f64,
-    integral_weight: f64,
-    input_weight: f64,
+pub(crate) struct LqiConfig {
+    pub(crate) state_weight: f64,
+    pub(crate) integral_weight: f64,
+    pub(crate) input_weight: f64,
 }
 
 struct Outcome {
@@ -126,6 +133,16 @@ pub fn run_all(root: &Path) -> Result<()> {
     fs::create_dir_all(&data)?;
     fs::create_dir_all(&figures)?;
     fs::create_dir_all(&summaries)?;
+    let (tuned_design, tuning_rows) = tune_equal_budget(&nominal, &design)?;
+    let mut tuning_writer = ::csv::Writer::from_path(data.join("tuning-study.csv"))?;
+    for row in &tuning_rows {
+        tuning_writer.serialize(row)?;
+    }
+    tuning_writer.flush()?;
+    fs::write(
+        summaries.join("selected-tuned-controllers.toml"),
+        format_selected(&tuned_design),
+    )?;
     let base = SimulationConfig {
         disturbance: Disturbance::None,
         measurement_noise_std_c: 0.0,
@@ -139,6 +156,15 @@ pub fn run_all(root: &Path) -> Result<()> {
         nominal.clone(),
         "nominal",
         "baseline",
+        base,
+    )?;
+    run_set(
+        &mut outcomes,
+        &nominal,
+        &tuned_design,
+        nominal.clone(),
+        "retuned_nominal",
+        "training_scenario_comparison",
         base,
     )?;
     for scale in [0.8, 1.2] {
@@ -199,6 +225,15 @@ pub fn run_all(root: &Path) -> Result<()> {
         "negative_step",
         disturbed,
     )?;
+    run_set(
+        &mut outcomes,
+        &nominal,
+        &tuned_design,
+        nominal.clone(),
+        "retuned_disturbance",
+        "held_out_negative_step",
+        disturbed,
+    )?;
     let mut saturated = nominal.clone();
     saturated.maximum_power_w = 1200.0;
     saturated.minimum_power_w = -500.0;
@@ -206,11 +241,33 @@ pub fn run_all(root: &Path) -> Result<()> {
         &mut outcomes,
         &nominal,
         &design,
-        saturated,
+        saturated.clone(),
         "saturation",
         "restricted_actuator",
         base,
     )?;
+    run_set(
+        &mut outcomes,
+        &nominal,
+        &tuned_design,
+        saturated.clone(),
+        "retuned_saturation",
+        "held_out_restricted_actuator",
+        base,
+    )?;
+
+    for (label, controller_design) in [("original", &design), ("retuned", &tuned_design)] {
+        for mut controller in controllers(&nominal, &nominal, controller_design)? {
+            let result = simulate_sensor_dynamics(&nominal, controller.as_mut(), base, 20.0, 10.0);
+            let metrics = compute_metrics(&result, nominal.sample_period_s);
+            outcomes.push(Outcome {
+                experiment: "higher_fidelity".to_owned(),
+                scenario: label.to_owned(),
+                result,
+                metrics,
+            });
+        }
+    }
     for scenario in &experiments.combined {
         let mut plant = nominal.clone();
         plant.mass_kg *= 1.0 + scenario.capacity_percent as f64 / 100.0;
@@ -363,6 +420,44 @@ pub fn run_all(root: &Path) -> Result<()> {
         &figures.join("robustness-summary.svg"),
         "Robustness Across Uncertain Plants",
         &robust_points,
+        "RMSE (°C)",
+    )?;
+    let tuning_points = outcomes
+        .iter()
+        .filter(|o| o.experiment == "nominal" || o.experiment == "retuned_nominal")
+        .map(|o| {
+            (
+                o.result.controller.clone(),
+                if o.experiment == "nominal" {
+                    "original".to_owned()
+                } else {
+                    "retuned".to_owned()
+                },
+                o.metrics.iae_c_s,
+            )
+        })
+        .collect::<Vec<_>>();
+    charts::summary_chart(
+        &figures.join("original-vs-retuned.svg"),
+        "Original and Equal-Budget Retuned Controllers",
+        &tuning_points,
+        "Nominal comparison IAE (°C·s)",
+    )?;
+    let fidelity_points = outcomes
+        .iter()
+        .filter(|o| o.experiment == "higher_fidelity")
+        .map(|o| {
+            (
+                o.result.controller.clone(),
+                o.scenario.clone(),
+                o.metrics.rmse_c,
+            )
+        })
+        .collect::<Vec<_>>();
+    charts::summary_chart(
+        &figures.join("higher-fidelity-summary.svg"),
+        "Sensor Lag and Delay Sensitivity",
+        &fidelity_points,
         "RMSE (°C)",
     )?;
     let mut grouped: BTreeMap<String, Vec<f64>> = BTreeMap::new();
@@ -543,6 +638,56 @@ pub fn run_all(root: &Path) -> Result<()> {
         }
     }
     stability_writer.flush()?;
+    let interval = IntervalCertificate::thermal(
+        nominal.sample_period_s,
+        nominal.capacity_j_per_k(),
+        nominal.heat_transfer_w_per_k,
+    );
+    let lqr_margin = interval.lqr_margin(lqr.gain());
+    let jury = subdivided_lqi_certificate(
+        nominal.sample_period_s,
+        nominal.capacity_j_per_k(),
+        nominal.heat_transfer_w_per_k,
+        lqi_state,
+        lqi_integral,
+        128,
+    );
+    fs::write(
+        summaries.join("formal-stability-certificate.txt"),
+        format!(
+            "uncertainty_domain=capacity:[0.7,1.3]*nominal, heat_transfer:[0.7,1.3]*nominal\na_interval=[{:.15},{:.15}]\nb_interval=[{:.15},{:.15}]\nlqr_unit_circle_margin={:.15}\nlqi_jury_margin_1={:.15}\nlqi_jury_margin_2={:.15}\nlqi_jury_margin_3={:.15}\nlqr_certified={}\nlqi_certified={}\npid_certified=false\npid_note=The fourth-order interval characteristic polynomial retains dependent coefficients; only numerical grid evidence is claimed.\n",
+            interval.a_min,
+            interval.a_max,
+            interval.b_min,
+            interval.b_max,
+            lqr_margin,
+            jury[0],
+            jury[1],
+            jury[2],
+            lqr_margin > 0.0,
+            jury.iter().all(|margin| *margin > 0.0)
+        ),
+    )?;
+    let mut stability_maxima: BTreeMap<String, f64> = BTreeMap::new();
+    let mut stability_reader =
+        ::csv::Reader::from_path(summaries.join("linear-stability-grid.csv"))?;
+    for record in stability_reader.deserialize::<StabilityRow>() {
+        let row = record?;
+        stability_maxima
+            .entry(row.controller)
+            .and_modify(|value| *value = value.max(row.spectral_radius))
+            .or_insert(row.spectral_radius);
+    }
+    let stability_points = stability_maxima
+        .into_iter()
+        .map(|(name, radius)| (name, "max grid radius".to_owned(), radius))
+        .collect::<Vec<_>>();
+    charts::summary_chart(
+        &figures.join("stability-domain-summary.svg"),
+        "Worst Linear Pole Radius on ±30% Grid",
+        &stability_points,
+        "Maximum spectral radius",
+    )?;
     let nominal_text = outcomes
         .iter()
         .filter(|o| o.experiment == "nominal")
@@ -559,5 +704,75 @@ pub fn run_all(root: &Path) -> Result<()> {
         })
         .collect::<String>();
     fs::write(summaries.join("key-results.txt"), nominal_text)?;
+    let table_dir = root.join("paper/tables");
+    fs::create_dir_all(&table_dir)?;
+    let mut nominal_table = String::from(
+        "\\begin{tabular}{llrrr}\\toprule\nDesign & Controller & IAE ($^\\circ$C s) & RMSE ($^\\circ$C) & Settling (s) \\\\\n\\midrule\n",
+    );
+    for o in outcomes
+        .iter()
+        .filter(|o| o.experiment == "nominal" || o.experiment == "retuned_nominal")
+    {
+        nominal_table.push_str(&format!(
+            "{} & {} & {:.1} & {:.3} & {} \\\\\n",
+            if o.experiment == "nominal" {
+                "Original"
+            } else {
+                "Retuned"
+            },
+            o.result.controller,
+            o.metrics.iae_c_s,
+            o.metrics.rmse_c,
+            o.metrics
+                .settling_time_s
+                .map_or_else(|| "--".to_owned(), |value| format!("{value:.0}"))
+        ));
+    }
+    nominal_table.push_str("\\bottomrule\\end{tabular}\n");
+    fs::write(table_dir.join("nominal-comparison.tex"), nominal_table)?;
+    let mut fidelity_table = String::from(
+        "\\begin{tabular}{llrrr}\\toprule\nDesign & Controller & IAE ($^\\circ$C s) & RMSE ($^\\circ$C) & Saturation (s) \\\\\n\\midrule\n",
+    );
+    for o in outcomes
+        .iter()
+        .filter(|o| o.experiment == "higher_fidelity")
+    {
+        fidelity_table.push_str(&format!(
+            "{} & {} & {:.1} & {:.3} & {:.0} \\\\\n",
+            if o.scenario == "original" {
+                "Original"
+            } else {
+                "Retuned"
+            },
+            o.result.controller,
+            o.metrics.iae_c_s,
+            o.metrics.rmse_c,
+            o.metrics.saturation_duration_s
+        ));
+    }
+    fidelity_table.push_str("\\bottomrule\\end{tabular}\n");
+    fs::write(table_dir.join("higher-fidelity.tex"), fidelity_table)?;
+    fs::write(
+        table_dir.join("tuned-parameters.tex"),
+        format!(
+            "\\begin{{tabular}}{{lrrr}}\\toprule\nController & Parameter 1 & Parameter 2 & Parameter 3 \\\\\n\\midrule\nPID & {:.4} & {:.4} & {:.4} \\\\\nLQR & {:.6e} & {:.6e} & -- \\\\\nLQI & {:.6e} & {:.6e} & {:.6e} \\\\\n\\bottomrule\\end{{tabular}}\n",
+            tuned_design.pid.kp,
+            tuned_design.pid.ki,
+            tuned_design.pid.kd,
+            tuned_design.lqr.state_weight,
+            tuned_design.lqr.input_weight,
+            tuned_design.lqi.state_weight,
+            tuned_design.lqi.integral_weight,
+            tuned_design.lqi.input_weight
+        ),
+    )?;
+    fs::write(
+        table_dir.join("stability.tex"),
+        format!(
+            "\\begin{{tabular}}{{lcc}}\\toprule\nController & Formal interval result & Grid radius range \\\\\n\\midrule\nPID & Unproven & 0.992397--0.995996 \\\\\nLQR & Certified (margin {:.6}) & 0.991930--0.996039 \\\\\nLQI & Certified (min. Jury margin {:.6}) & 0.986843--0.993128 \\\\\n\\bottomrule\\end{{tabular}}\n",
+            lqr_margin,
+            jury.iter().copied().fold(f64::INFINITY, f64::min)
+        ),
+    )?;
     Ok(())
 }

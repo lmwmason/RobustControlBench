@@ -1,0 +1,15 @@
+[pid]
+kp = 596.570151919516
+ki = 3.224160456457
+kd = 2424.000000000000
+derivative_filter_s = 15.000000000000
+anti_windup_gain = 0.020000000000
+
+[lqr]
+state_weight = 18.212636020275
+input_weight = 0.000000184287
+
+[lqi]
+state_weight = 0.140022899132
+integral_weight = 0.001315769304
+input_weight = 0.000006155006
