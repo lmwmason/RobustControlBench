@@ -1,3 +1,5 @@
 /target/
+/paper/build/
+/paper/build-ko/
 *.tmp
 

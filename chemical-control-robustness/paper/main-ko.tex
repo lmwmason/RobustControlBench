@@ -1,0 +1,69 @@
+\documentclass[10pt,a4paper,twocolumn]{article}
+\usepackage[margin=19mm,top=22mm,bottom=22mm]{geometry}
+\usepackage{fontspec}
+\usepackage{kotex}
+\setmainfont{NotoSansKR.ttf}[
+  Path=fonts/,
+  Renderer=Harfbuzz,
+  UprightFeatures={RawFeature={axis={wght=400}}},
+  BoldFont=NotoSansKR.ttf,
+  BoldFeatures={RawFeature={axis={wght=700}}}
+]
+\setsansfont{NotoSansKR.ttf}[
+  Path=fonts/,
+  Renderer=Harfbuzz,
+  UprightFeatures={RawFeature={axis={wght=400}}},
+  BoldFont=NotoSansKR.ttf,
+  BoldFeatures={RawFeature={axis={wght=700}}}
+]
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{array,booktabs,float,xcolor,url,microtype,balance,placeins}
+\usepackage{fancyhdr,caption,siunitx}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={모의 열 공정의 매개변수 불확실성에서 PID, LQR, LQI 제어기의 강인성과 성능 상충관계},pdfauthor={Mu-Won Lee},pdfsubject={제어기 비교 연구},pdfkeywords={PID, LQR, LQI, 열 공정, 매개변수 불확실성}}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage[backend=biber,style=numeric-comp,sorting=none,maxbibnames=6]{biblatex}
+\addbibresource{references.bib}
+\captionsetup{font=small,labelfont=bf}
+\renewcommand{\figurename}{그림}
+\renewcommand{\tablename}{표}
+\crefname{figure}{그림}{그림}
+\crefname{table}{표}{표}
+\AtBeginDocument{%
+  \renewcommand{\crefpairconjunction}{ 및 }%
+  \renewcommand{\crefmiddleconjunction}{, }%
+  \renewcommand{\creflastconjunction}{ 및 }%
+  \renewcommand{\crefpairgroupconjunction}{ 및 }%
+  \renewcommand{\crefmiddlegroupconjunction}{, }%
+  \renewcommand{\creflastgroupconjunction}{ 및 }%
+}
+\setlength{\columnsep}{7mm}\setlength{\parindent}{1em}\setlength{\parskip}{0pt}\setlength{\headheight}{13pt}
+\pagestyle{fancy}\fancyhf{}
+\fancyhead[L]{\footnotesize 열 공정 불확실성에서의 PID, LQR, LQI}
+\fancyhead[R]{\footnotesize 2026}
+\fancyfoot[C]{\thepage}\renewcommand{\headrulewidth}{0.3pt}\renewcommand{\footrulewidth}{0pt}
+\sisetup{detect-all,per-mode=symbol}
+\begin{document}
+\twocolumn[{
+\begin{center}
+{\LARGE\bfseries 모의 열 공정의 매개변수 불확실성에서\\PID, LQR, LQI 제어기의 강인성과 성능 상충관계\par}
+\vspace{0.9em}{\large Mu-Won Lee\par}\vspace{0.3em}
+{\normalsize 충북과학고등학교, 대한민국 청주\par}
+{\small \href{mailto:lmw.hpc@gmail.com}{lmw.hpc@gmail.com}\par}\vspace{1.1em}
+\begin{minipage}{0.94\textwidth}\input{sections-ko/abstract}\end{minipage}
+\end{center}\vspace{1.3em}
+}]
+\input{sections-ko/introduction}
+\input{sections-ko/related-work}
+\input{sections-ko/system-model}
+\input{sections-ko/controller-design}
+\input{sections-ko/methodology}
+\input{sections-ko/numerical-validation}
+\input{sections-ko/results}
+\input{sections-ko/stability-analysis}
+\input{sections-ko/discussion}
+\input{sections-ko/limitations}
+\input{sections-ko/conclusion}
+\printbibliography[title={참고문헌}]
+\end{document}

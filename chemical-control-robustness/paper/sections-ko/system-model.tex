@@ -1,0 +1,23 @@
+\section{시스템 모델}\label{sec:model}
+균질한 비반응성 용액에서 에너지 보존식은
+\begin{equation}
+m c_p \dot T=Q-UA(T-T_a)+d \label{eq:energy}
+\end{equation}
+이다. 여기서 $d$는 와트 단위 외부 열동력이며 음수이면 열을 제거한다. \cref{eq:energy}의 모든 항은 와트 단위이다. 예시 가정은 $m=\SI{10}{kg}$, $c_p=\SI{4180}{J.kg^{-1}.K^{-1}}$, $UA=\SI{35}{W.K^{-1}}$, $T_a=\SI{20}{\celsius}$이다. 이는 물과 유사한 모델링 선택이며 측정값이 아니다.
+
+$x=T-T_a$, $C_{\rm th}=mc_p$, $u=Q$, $y=x$로 두면
+\begin{equation}
+\dot x=Ax+Bu+Ed,\quad A=-\frac{UA}{C_{\rm th}},\quad B=E=\frac{1}{C_{\rm th}} \label{eq:ss}
+\end{equation}
+이다. $h=\SI{1}{s}$ 동안 입력을 유지하면
+\begin{equation}
+A_d=e^{Ah},\qquad B_d=\frac{e^{Ah}-1}{A}B,\qquad E_d=\frac{e^{Ah}-1}{A}E \label{eq:zoh}
+\end{equation}
+이다. 상수 $w=Q+d$에 대한 독립 해석해는
+\begin{equation}
+T(t)=T_a+\frac{w}{UA}+\left[T(0)-T_a-\frac{w}{UA}\right]e^{-UA t/C_{\rm th}} \label{eq:analytic}
+\end{equation}
+이다. 평형 조건은 $Q+d=UA(T-T_a)$이다. 열용량과 $UA$는 독립적으로 $\pm30\%$ 변하며, 주위 온도 변화는 섭씨 온도의 가산 변화이지 아핀 척도에 대한 백분율 변화가 아니다.
+
+\subsection{고충실도 모의 공정}
+주 벤치마크는 \cref{eq:ss}이다. 보조 공정은 유체의 정확한 전파를 유지하면서 시정수 \SI{20}{s}의 1차 센서 상태와 표본화된 \SI{10}{s} 순수 측정 지연을 도입한다. 이 작은 확장은 반응 동역학이나 임의의 고차 공정을 추가하지 않고 누락된 센서 동특성에 대한 민감도를 분리한다.
