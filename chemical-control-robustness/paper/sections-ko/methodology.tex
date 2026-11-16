@@ -1,9 +1,9 @@
 \section{실험 방법}\label{sec:methods}
 모든 제어기는 같은 측정 온도, \SI{1}{s} 표본 주기, \SI{3600}{s} 구간, \SI{20}{\celsius}/\SI{50}{\celsius}의 초기/기준 온도, 공칭 한계 $[-2000,3000]$ W를 사용한다. 시험 시나리오는 매개변수별 7단계 변화, 세 가지 결합 사례, \SI{1800}{s}에서의 $-\SI{700}{W}$ 계단 부하, $\sigma=\SI{0.15}{\celsius}$ 가우시안 측정 잡음, 제한 한계 $[-500,1200]$ W를 포함한다.
 
-\subsection{동일 예산 튜닝}
-제어기마다 64개의 결정론적 저불일치 후보를 평가한다. PID 범위는 $K_p\in[100,1200]$, $K_i\in[0.2,12]$, $K_d\in[0,3000]$이고, LQR은 $Q\in[0.05,20]$, $R\in[10^{-7},2\times10^{-3}]$, LQI는 $Q_x\in[0.05,20]$, $Q_z\in[10^{-5},2\times10^{-2}]$와 같은 $R$ 구간이다. $K_d$ 이외에는 로그 척도를 쓴다. 모든 후보는 공칭 추종, $-\SI{350}{W}$ 부하, 웜스타트 시나리오를 공유한다. 제어기별 훈련 상위 8개 후보를 동일한 네 가지 $\pm15\%$ 검증 사례에 투입한다. 검증에서 한 번 선택하며 보류 시험 결과로 선택을 바꾸지 않는다.
+\subsection{Equal-budget tuning}
+제어기마다 64개의 deterministic low-discrepancy candidate를 평가한다. PID 범위는 $K_p\in[100,1200]$, $K_i\in[0.2,12]$, $K_d\in[0,3000]$이고, LQR은 $Q\in[0.05,20]$, $R\in[10^{-7},2\times10^{-3}]$, LQI는 $Q_x\in[0.05,20]$, $Q_z\in[10^{-5},2\times10^{-2}]$와 같은 $R$ 구간이다. $K_d$ 이외에는 log scale을 쓴다. 모든 후보는 nominal tracking, $-\SI{350}{W}$ load, warm-start scenario를 공유한다. 제어기별 training 상위 8개 후보를 동일한 네 가지 $\pm15\%$ validation case에 투입한다. Validation에서 한 번 선택하며 held-out test 결과로 선택을 바꾸지 않는다.
 
-목적함수는 정규화 IAE, 절대 말단 오차의 2배, 포화 비율의 0.15배, 정규화 RMS 제어입력의 0.05배의 합이다. 동일 후보 수는 계산량을 제한하지만 2차원과 3차원 탐색 난이도를 같게 만들지는 않는다.
+Objective는 normalized IAE, absolute tail error의 2배, saturation fraction의 0.15배, normalized RMS control의 0.05배의 합이다. 동일 후보 수는 계산량을 제한하지만 2차원과 3차원 search difficulty를 같게 만들지는 않는다.
 
 지표는 $N+1$ 끝점 표본에 대해 $N$개의 유지 구간을 사용한다. 잡음 분석은 시드 $20261116+i$를 갖는 독립 ChaCha8 스트림 100개를 사용하고 시드별로 제어기를 짝지어 비교한다. 신뢰구간은 반복 차이와 $t_{99}=1.984$를 사용한다. 통계적 식별 가능성과 실용적 크기를 분리해 보고한다.

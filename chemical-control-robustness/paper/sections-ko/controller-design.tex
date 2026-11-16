@@ -1,11 +1,11 @@
 \section{제어기 설계}\label{sec:controllers}
-PID 구현은 측정값에 대한 미분, 1차 미분 필터, 출력 포화, 역계산 안티와인드업을 사용한다. 저장된 적분 상태와 필터링된 미분 상태는 \SI{1}{s}마다 갱신하며 실제 시나리오의 출력 한계를 우선 적용한다.
+PID 구현은 derivative-on-measurement, first-order derivative filter, output saturation, back-calculation anti-windup을 사용한다. 저장된 integral state와 filtered derivative state는 \SI{1}{s}마다 갱신하며 실제 scenario의 output limit을 우선 적용한다.
 
 LQR은
 \begin{equation}
 J=\sum_{k=0}^{\infty}(x_k^{\mathsf T}Qx_k+u_k^{\mathsf T}Ru_k) \label{eq:lqcost}
 \end{equation}
-를 최소화하고 이산 대수 Riccati 방정식에서 피드백 이득을 구한다. 추종에는 공칭 평형 앞먹임 $u=UA_0(r-T_{a0})-K(x-r)$를 사용한다. 따라서 일반 LQR은 미지의 일정 부하를 오프셋 없이 제거한다고 기대할 수 없다.
+를 최소화하고 discrete algebraic Riccati equation(DARE)에서 feedback gain을 구한다. Tracking에는 nominal equilibrium feedforward $u=UA_0(r-T_{a0})-K(x-r)$를 사용한다. 따라서 plain LQR은 미지의 constant load를 offset 없이 제거한다고 기대할 수 없다.
 
 LQI는 다음과 같이 상태를 확장한다.
 \begin{align}
@@ -15,4 +15,4 @@ u_k&=UA_0(r-T_{a0})-K_x(x_k-r)-K_z z_k. \label{eq:lqi}
 명령 계산에는 $z_{k+1}$ 저장 전의 $z_k$를 사용하여 합성 규약과 일치시켰다. 확장 시스템의 가제어성 행렬식은 $-hB_d^2\ne0$이다.
 
 기존 PID 이득은 $(420,2,1200)$, LQR 가중치는 $(Q,R)=(1,2\times10^{-5})$, LQI 가중치는 $(Q_x,Q_z,R)=(1,8\times10^{-4},2\times10^{-5})$이다. 재튜닝 매개변수는 \cref{tab:tuned}과 같이 자동 생성한다.
-\begin{table}[!htbp]\centering\caption{동일 예산 매개변수: PID $(K_p,K_i,K_d)$, LQR $(Q,R)$, LQI $(Q_x,Q_z,R)$.}\label{tab:tuned}\resizebox{\linewidth}{!}{\input{tables/tuned-parameters.tex}}\end{table}
+\begin{table}[!htbp]\centering\caption{Equal-budget parameters: PID $(K_p,K_i,K_d)$, LQR $(Q,R)$, LQI $(Q_x,Q_z,R)$.}\label{tab:tuned}\resizebox{\linewidth}{!}{\input{tables/tuned-parameters.tex}}\end{table}

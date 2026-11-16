@@ -1,4 +1,4 @@
 \section{서론}\label{sec:introduction}
-제어기 순위는 제어기 구조보다 튜닝 노력, 기준값 처리, 센싱 또는 액추에이터 구현을 반영할 수 있다. 미지의 일정 부하에서 적분기가 없는 LQR 추종기를 PID 및 LQI와 비교할 때 특히 중요하다. 본 연구는 이 문제를 감사한 시뮬레이션 연구이다. 감사에서 발견된 부정적 결과도 보존한다. 적분 제어기에 실제 액추에이터 한계를 전달하지 않아 기존 제한 액추에이터 순위가 무효였고, 결함 수정 후 보고된 승자가 바뀌었다.
+제어기 순위는 제어기 구조보다 tuning effort, reference handling, sensing 또는 actuator implementation을 반영할 수 있다. 미지의 constant load에서 적분기가 없는 LQR tracker를 PID 및 LQI와 비교할 때 특히 중요하다. 본 연구는 이 문제를 감사한 simulation 연구이다. 감사에서 발견된 negative result도 보존한다. 적분 제어기에 실제 actuator limit을 전달하지 않아 기존 restricted-actuator 순위가 무효였고, 결함 수정 후 보고된 승자가 바뀌었다.
 
-연구 질문은 제한된 열용량 및 열전달 불확실성이 성능에 미치는 영향, 순위가 바뀌는 조건, 적분 동작의 부하 제거 효과, 포화와 잡음이 결론에 미치는 영향, 그리고 시뮬레이션에서 추론하는 대신 증명할 수 있는 안정성 범위이다. 결정론적 Rust 벤치마크, 분리된 훈련·검증·시험 시나리오의 동일 예산 튜닝, 해석 및 독립 수치 검사, 저차 구간 안정성 인증, 센서 지연을 추가한 보조 모형을 제공한다. 새로운 제어 법칙을 제안하지는 않는다.
+연구 질문은 제한된 열용량 및 열전달 불확실성이 성능에 미치는 영향, 순위가 바뀌는 조건, integral action의 load rejection 효과, saturation과 noise가 결론에 미치는 영향, 그리고 simulation에서 추론하는 대신 증명할 수 있는 안정성 범위이다. 결정론적 Rust benchmark, 분리된 training·validation·test scenario의 equal-budget tuning, 해석 및 독립 수치 검사, 저차 interval stability certificate, sensor lag와 delay를 추가한 보조 모형을 제공한다. 새로운 control law를 제안하지는 않는다.

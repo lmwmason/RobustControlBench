@@ -21,7 +21,7 @@ b73c851485ae6d983c2549366d746620f72b7efb24b5fdb7c62e55a9b5265fae  results/data/m
 4b2be5f6cfb885e103c7c767db01bb1bae4b8388d5365fe289a59f3ddbb4e081  results/data/tuning-study.csv
 ef97dfd15c7b2273565e5cc08630c5fdc601a24f10ab8d3bc7f50d76176a5040  results/summaries/formal-stability-certificate.txt
 afd32a6352a8e97e39592fbf1d2b11f0e809c668d6a25aa0cca75e50b2a97b30  paper/chemical-control-robustness.pdf
-fd6482ca29c3a375764808f22d97fe1e708d1836fdc419d0fd30fe90923604f2  paper/chemical-control-robustness-ko.pdf
+1c9b56bd3aec6c35177322133faf9646a5ca4d50047ec2c3b5cb5c69532839bb  paper/chemical-control-robustness-ko.pdf
 ```
 
 Numerical conventions are exact scalar ZOH; DARE update tolerance `1e-13` and residual tolerance `1e-8`; `N` left-held intervals for `N+1` endpoints; and paired 95% intervals using `t(99)=1.984`. LQR is certified with conservative scalar interval bounds. LQI uses second-order Jury inequalities with outward-conservative bounds over 128 by 128 covering subboxes. PID retains a 3721-plant grid and is not formally certified. Rust/Plotters produces SVG figures; the template build converts them to vector PDF with `rsvg-convert` and compiles with `latexmk`, pdfLaTeX, and Biber.
