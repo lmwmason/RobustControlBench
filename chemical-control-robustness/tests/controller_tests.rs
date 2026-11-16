@@ -1,4 +1,5 @@
 use chemical_control_robustness::{
+    analysis::validation::{scalar_dare_closed_form, scalar_lqr_gain, two_by_two_eigenvalues},
     controllers::{Controller, LqiController, LqrController, PidController, lqr::solve_dare},
     model::ThermalParameters,
 };
@@ -6,6 +7,58 @@ use nalgebra::DMatrix;
 
 fn nominal() -> ThermalParameters {
     chemical_control_robustness::read_toml("configs/nominal.toml").unwrap()
+}
+
+#[test]
+fn scalar_dare_agrees_with_independent_closed_form() {
+    let p = nominal();
+    let d = p.discretize();
+    let (computed, gain, _) = solve_dare(
+        &DMatrix::from_element(1, 1, d.state_factor),
+        &DMatrix::from_element(1, 1, d.input_factor),
+        &DMatrix::from_element(1, 1, 1.0),
+        &DMatrix::from_element(1, 1, 0.00002),
+    )
+    .unwrap();
+    let exact = scalar_dare_closed_form(d.state_factor, d.input_factor, 1.0, 0.00002);
+    assert!((computed[(0, 0)] - exact).abs() / exact < 2.0e-12);
+    let exact_gain = scalar_lqr_gain(d.state_factor, d.input_factor, exact, 0.00002);
+    assert!((gain[(0, 0)] - exact_gain).abs() / exact_gain.abs() < 2.0e-12);
+}
+
+#[test]
+fn lqi_matrix_eigenvalues_match_closed_form() {
+    let p = nominal();
+    let d = p.discretize();
+    let lqi = LqiController::design(
+        d.state_factor,
+        d.input_factor,
+        p.sample_period_s,
+        1.0,
+        0.0008,
+        0.00002,
+        p.heat_transfer_w_per_k,
+        p.ambient_c,
+        p.minimum_power_w,
+        p.maximum_power_w,
+    )
+    .unwrap();
+    let (kx, kz) = lqi.gains();
+    let a = d.state_factor - d.input_factor * kx;
+    let b = -d.input_factor * kz;
+    let (root_one, root_two, imaginary) = two_by_two_eigenvalues(a, b, -p.sample_period_s, 1.0);
+    let expected_radius = (root_one * root_one + imaginary * imaginary)
+        .sqrt()
+        .max((root_two * root_two + imaginary * imaginary).sqrt());
+    let calculated = chemical_control_robustness::analysis::robustness::lqi_radius(
+        d.state_factor,
+        d.input_factor,
+        p.sample_period_s,
+        kx,
+        kz,
+    );
+    assert!((expected_radius - calculated).abs() < 1.0e-12);
+    assert!(calculated < 1.0);
 }
 
 #[test]
