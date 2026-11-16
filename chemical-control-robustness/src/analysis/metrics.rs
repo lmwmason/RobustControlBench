@@ -17,8 +17,11 @@ pub struct Metrics {
 pub fn compute_metrics(result: &SimulationResult, dt: f64) -> Metrics {
     let records = &result.records;
     let errors: Vec<f64> = records.iter().map(|r| r.tracking_error_c).collect();
-    let iae = errors.iter().map(|e| e.abs() * dt).sum();
-    let ise = errors.iter().map(|e| e * e * dt).sum();
+    // N+1 endpoint samples describe N held intervals; use left rectangles.
+    let interval_records = &records[..records.len().saturating_sub(1)];
+    let interval_errors = &errors[..errors.len().saturating_sub(1)];
+    let iae = interval_errors.iter().map(|e| e.abs() * dt).sum();
+    let ise = interval_errors.iter().map(|e| e * e * dt).sum();
     let max_error = errors.iter().map(|e| e.abs()).fold(0.0, f64::max);
     let reference = records[0].reference_c;
     let overshoot = records
@@ -40,12 +43,15 @@ pub fn compute_metrics(result: &SimulationResult, dt: f64) -> Metrics {
     Metrics {
         iae_c_s: iae,
         ise_c2_s: ise,
-        rmse_c: (ise / (records.len() as f64 * dt)).sqrt(),
+        rmse_c: (ise / (interval_records.len() as f64 * dt)).sqrt(),
         maximum_absolute_error_c: max_error,
         overshoot_c: overshoot,
         settling_time_s: settling_time,
         steady_state_error_c: steady_state_error,
-        control_effort_w2_s: records.iter().map(|r| r.control_power_w.powi(2) * dt).sum(),
-        saturation_duration_s: records.iter().filter(|r| r.saturated).count() as f64 * dt,
+        control_effort_w2_s: interval_records
+            .iter()
+            .map(|r| r.control_power_w.powi(2) * dt)
+            .sum(),
+        saturation_duration_s: interval_records.iter().filter(|r| r.saturated).count() as f64 * dt,
     }
 }

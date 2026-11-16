@@ -66,14 +66,15 @@ impl Controller for LqiController {
         self.integral_error = 0.0;
     }
     fn command(&mut self, reference_c: f64, measured_c: f64) -> f64 {
-        self.integral_error += (reference_c - measured_c) * self.dt;
+        let error = reference_c - measured_c;
+        // The DARE model uses z[k] for u[k], then advances z[k+1].
         let command = self.feedforward_w * (reference_c - self.ambient_c)
             - self.state_gain * (measured_c - reference_c)
             - self.integral_gain * self.integral_error;
         let saturated = command.clamp(self.minimum, self.maximum);
         // Conditional integration protects the integral state during saturation.
-        if command != saturated && (reference_c - measured_c) * command.signum() > 0.0 {
-            self.integral_error -= (reference_c - measured_c) * self.dt;
+        if command == saturated || error * command.signum() <= 0.0 {
+            self.integral_error += error * self.dt;
         }
         saturated
     }

@@ -1,6 +1,6 @@
 uncertainty_percent = [-30, -20, -10, 0, 10, 20, 30]
 noise_standard_deviation_c = 0.15
-noise_replicates = 12
+noise_replicates = 100
 base_seed = 20261116
 disturbance_start_s = 1800.0
 disturbance_power_w = -700.0
@@ -9,16 +9,16 @@ disturbance_power_w = -700.0
 name = "low_capacity_high_loss_cold_ambient"
 capacity_percent = -20
 heat_transfer_percent = 30
-ambient_percent = -10
+ambient_offset_c = -2.0
 
 [[combined]]
 name = "high_capacity_low_loss_warm_ambient"
 capacity_percent = 30
 heat_transfer_percent = -20
-ambient_percent = 10
+ambient_offset_c = 2.0
 
 [[combined]]
 name = "low_capacity_low_loss"
 capacity_percent = -30
 heat_transfer_percent = -30
-ambient_percent = 0
+ambient_offset_c = 0.0

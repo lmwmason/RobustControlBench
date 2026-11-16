@@ -115,3 +115,57 @@ pub fn summary_chart(
     root.present()?;
     Ok(())
 }
+
+pub fn uncertainty_sweep_chart(
+    path: &Path,
+    title: &str,
+    series: &[(String, Vec<(f64, f64)>)],
+) -> Result<()> {
+    let root = SVGBackend::new(path, (1100, 650)).into_drawing_area();
+    root.fill(&WHITE)?;
+    let (low, high) = series
+        .iter()
+        .flat_map(|(_, values)| values.iter().map(|(_, y)| *y))
+        .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), value| {
+            (lo.min(value), hi.max(value))
+        });
+    let margin = ((high - low) * 0.12).max(0.02);
+    let mut chart = ChartBuilder::on(&root)
+        .caption(title, ("sans-serif", 28))
+        .margin(20)
+        .x_label_area_size(55)
+        .y_label_area_size(70)
+        .build_cartesian_2d(-30.0..30.0, (low - margin)..(high + margin))?;
+    chart
+        .configure_mesh()
+        .x_desc("Parameter deviation from nominal (%)")
+        .y_desc("RMSE (°C)")
+        .label_style(("sans-serif", 16))
+        .axis_desc_style(("sans-serif", 18))
+        .draw()?;
+    for (name, values) in series {
+        let series_color = color(name);
+        chart
+            .draw_series(LineSeries::new(
+                values.iter().copied(),
+                series_color.stroke_width(3),
+            ))?
+            .label(name.clone())
+            .legend(move |(x, y)| {
+                PathElement::new([(x, y), (x + 25, y)], series_color.stroke_width(3))
+            });
+        chart.draw_series(
+            values
+                .iter()
+                .map(|point| Circle::new(*point, 4, series_color.filled())),
+        )?;
+    }
+    chart
+        .configure_series_labels()
+        .background_style(WHITE.mix(0.85))
+        .border_style(BLACK)
+        .label_font(("sans-serif", 17))
+        .draw()?;
+    root.present()?;
+    Ok(())
+}

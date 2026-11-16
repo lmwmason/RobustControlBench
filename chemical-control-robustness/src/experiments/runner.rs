@@ -2,7 +2,8 @@ use super::scenarios::ExperimentsConfig;
 use crate::{
     analysis::{
         Metrics, compute_metrics,
-        statistics::{mean, sample_standard_deviation},
+        robustness::{StabilityRow, lqi_radius, lqr_radius, pid_radius},
+        statistics::{mean, paired_summary, sample_standard_deviation},
     },
     controllers::{LqiController, LqrController, PidController},
     model::ThermalParameters,
@@ -17,13 +18,13 @@ use anyhow::Result;
 use serde::Deserialize;
 use std::{collections::BTreeMap, fs, path::Path};
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct ControllerConfig {
     pid: PidConfig,
     lqr: LqrConfig,
     lqi: LqiConfig,
 }
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct PidConfig {
     kp: f64,
     ki: f64,
@@ -31,12 +32,12 @@ struct PidConfig {
     derivative_filter_s: f64,
     anti_windup_gain: f64,
 }
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct LqrConfig {
     state_weight: f64,
     input_weight: f64,
 }
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize)]
 struct LqiConfig {
     state_weight: f64,
     integral_weight: f64,
@@ -52,6 +53,7 @@ struct Outcome {
 
 fn controllers(
     p: &ThermalParameters,
+    actuator: &ThermalParameters,
     c: &ControllerConfig,
 ) -> Result<Vec<Box<dyn crate::controllers::Controller>>> {
     let d = p.discretize();
@@ -63,8 +65,8 @@ fn controllers(
             c.pid.derivative_filter_s,
             c.pid.anti_windup_gain,
             p.sample_period_s,
-            p.minimum_power_w,
-            p.maximum_power_w,
+            actuator.minimum_power_w,
+            actuator.maximum_power_w,
         )),
         Box::new(LqrController::design(
             d.state_factor,
@@ -73,8 +75,8 @@ fn controllers(
             c.lqr.input_weight,
             p.heat_transfer_w_per_k,
             p.ambient_c,
-            p.minimum_power_w,
-            p.maximum_power_w,
+            actuator.minimum_power_w,
+            actuator.maximum_power_w,
         )?),
         Box::new(LqiController::design(
             d.state_factor,
@@ -85,8 +87,8 @@ fn controllers(
             c.lqi.input_weight,
             p.heat_transfer_w_per_k,
             p.ambient_c,
-            p.minimum_power_w,
-            p.maximum_power_w,
+            actuator.minimum_power_w,
+            actuator.maximum_power_w,
         )?),
     ])
 }
@@ -100,7 +102,7 @@ fn run_set(
     scenario: &str,
     simulation: SimulationConfig,
 ) -> Result<()> {
-    for mut controller in controllers(nominal, design)? {
+    for mut controller in controllers(nominal, &plant, design)? {
         let result = simulate(&plant, controller.as_mut(), simulation);
         let metrics = compute_metrics(&result, plant.sample_period_s);
         outcomes.push(Outcome {
@@ -139,6 +141,24 @@ pub fn run_all(root: &Path) -> Result<()> {
         "baseline",
         base,
     )?;
+    for scale in [0.8, 1.2] {
+        let mut sensitivity = design.clone();
+        sensitivity.pid.kp *= scale;
+        sensitivity.pid.ki *= scale;
+        sensitivity.pid.kd *= scale;
+        sensitivity.lqr.state_weight *= scale;
+        sensitivity.lqi.state_weight *= scale;
+        sensitivity.lqi.integral_weight *= scale;
+        run_set(
+            &mut outcomes,
+            &nominal,
+            &sensitivity,
+            nominal.clone(),
+            "tuning_sensitivity",
+            &format!("gain_scale_{scale:.1}"),
+            base,
+        )?;
+    }
     for percent in &experiments.uncertainty_percent {
         let mut plant = nominal.clone();
         plant.mass_kg *= 1.0 + *percent as f64 / 100.0;
@@ -195,7 +215,7 @@ pub fn run_all(root: &Path) -> Result<()> {
         let mut plant = nominal.clone();
         plant.mass_kg *= 1.0 + scenario.capacity_percent as f64 / 100.0;
         plant.heat_transfer_w_per_k *= 1.0 + scenario.heat_transfer_percent as f64 / 100.0;
-        plant.ambient_c *= 1.0 + scenario.ambient_percent as f64 / 100.0;
+        plant.ambient_c += scenario.ambient_offset_c;
         run_set(
             &mut outcomes,
             &nominal,
@@ -261,20 +281,35 @@ pub fn run_all(root: &Path) -> Result<()> {
         &selected("nominal", "baseline"),
         true,
     )?;
-    charts::trace_chart(
-        &figures.join("capacity-uncertainty.svg"),
-        "Thermal-Capacity Uncertainty (-30%)",
-        "Temperature (°C)",
-        &selected("capacity", "-30%"),
-        false,
-    )?;
-    charts::trace_chart(
-        &figures.join("heat-transfer-uncertainty.svg"),
-        "Heat-Transfer Uncertainty (+30%)",
-        "Temperature (°C)",
-        &selected("heat_transfer", "+30%"),
-        false,
-    )?;
+    for (experiment, filename, title) in [
+        (
+            "capacity",
+            "capacity-uncertainty.svg",
+            "Thermal-Capacity Uncertainty Sweep",
+        ),
+        (
+            "heat_transfer",
+            "heat-transfer-uncertainty.svg",
+            "Heat-Transfer Uncertainty Sweep",
+        ),
+    ] {
+        let mut series = Vec::new();
+        for controller in ["PID", "LQR", "LQI"] {
+            let mut points = outcomes
+                .iter()
+                .filter(|o| o.experiment == experiment && o.result.controller == controller)
+                .map(|o| {
+                    (
+                        o.scenario.trim_end_matches('%').parse::<f64>().unwrap(),
+                        o.metrics.rmse_c,
+                    )
+                })
+                .collect::<Vec<_>>();
+            points.sort_by(|left, right| left.0.total_cmp(&right.0));
+            series.push((controller.to_owned(), points));
+        }
+        charts::uncertainty_sweep_chart(&figures.join(filename), title, &series)?;
+    }
     charts::trace_chart(
         &figures.join("disturbance-rejection.svg"),
         "Disturbance Rejection (-700 W at 1800 s)",
@@ -346,6 +381,168 @@ pub fn run_all(root: &Path) -> Result<()> {
         ));
     }
     fs::write(summaries.join("noise-statistics.csv"), summary)?;
+
+    // Noise analysis uses the final 1200 s, avoiding domination by deterministic start-up.
+    let mut noise_tail: BTreeMap<String, Vec<f64>> = BTreeMap::new();
+    let mut replicate_writer = ::csv::Writer::from_path(data.join("noise-replicates.csv"))?;
+    replicate_writer.write_record(["scenario", "controller", "tail_rmse_c"])?;
+    for o in outcomes.iter().filter(|o| o.experiment == "noise") {
+        let tail = o.result.records.iter().filter(|r| r.time_s >= 2400.0);
+        let values: Vec<f64> = tail.map(|r| r.tracking_error_c).collect();
+        let tail_rmse = (values.iter().map(|v| v * v).sum::<f64>() / values.len() as f64).sqrt();
+        replicate_writer.write_record([
+            &o.scenario,
+            &o.result.controller,
+            &format!("{tail_rmse:.12}"),
+        ])?;
+        noise_tail
+            .entry(o.result.controller.clone())
+            .or_default()
+            .push(tail_rmse);
+    }
+    replicate_writer.flush()?;
+    let mut paired_writer =
+        ::csv::Writer::from_path(summaries.join("noise-paired-comparisons.csv"))?;
+    paired_writer.write_record([
+        "left",
+        "right",
+        "n",
+        "mean_difference_c",
+        "sd_difference_c",
+        "ci95_low_c",
+        "ci95_high_c",
+        "cohen_dz",
+    ])?;
+    for (left, right) in [("LQI", "PID"), ("LQI", "LQR"), ("PID", "LQR")] {
+        let stats = paired_summary(&noise_tail[left], &noise_tail[right]);
+        paired_writer.write_record([
+            left,
+            right,
+            &noise_tail[left].len().to_string(),
+            &format!("{:.12}", stats.mean_difference),
+            &format!("{:.12}", stats.standard_deviation),
+            &format!("{:.12}", stats.ci95_low),
+            &format!("{:.12}", stats.ci95_high),
+            &format!("{:.8}", stats.standardized_effect),
+        ])?;
+    }
+    paired_writer.flush()?;
+
+    let disturbance_outcomes: Vec<&Outcome> = outcomes
+        .iter()
+        .filter(|o| o.experiment == "disturbance")
+        .collect();
+    let mut disturbance_writer =
+        ::csv::Writer::from_path(summaries.join("disturbance-recovery.csv"))?;
+    disturbance_writer.write_record([
+        "controller",
+        "post_step_iae_c_s",
+        "maximum_post_step_error_c",
+        "recovery_time_s",
+        "tail_error_c",
+    ])?;
+    for o in disturbance_outcomes {
+        let post: Vec<_> = o
+            .result
+            .records
+            .iter()
+            .filter(|r| r.time_s >= experiments.disturbance_start_s)
+            .collect();
+        let post_iae = post
+            .iter()
+            .take(post.len().saturating_sub(1))
+            .map(|r| r.tracking_error_c.abs() * nominal.sample_period_s)
+            .sum::<f64>();
+        let maximum = post
+            .iter()
+            .map(|r| r.tracking_error_c.abs())
+            .fold(0.0, f64::max);
+        let recovery = post
+            .iter()
+            .enumerate()
+            .find(|(i, _)| post[*i..].iter().all(|r| r.tracking_error_c.abs() <= 0.6))
+            .map(|(_, r)| r.time_s - experiments.disturbance_start_s);
+        disturbance_writer.write_record([
+            &o.result.controller,
+            &format!("{post_iae:.9}"),
+            &format!("{maximum:.9}"),
+            &recovery.map_or_else(String::new, |v| format!("{v:.1}")),
+            &format!("{:.12}", o.metrics.steady_state_error_c),
+        ])?;
+    }
+    disturbance_writer.flush()?;
+
+    let nominal_discrete = nominal.discretize();
+    let lqr = LqrController::design(
+        nominal_discrete.state_factor,
+        nominal_discrete.input_factor,
+        design.lqr.state_weight,
+        design.lqr.input_weight,
+        nominal.heat_transfer_w_per_k,
+        nominal.ambient_c,
+        nominal.minimum_power_w,
+        nominal.maximum_power_w,
+    )?;
+    let lqi = LqiController::design(
+        nominal_discrete.state_factor,
+        nominal_discrete.input_factor,
+        nominal.sample_period_s,
+        design.lqi.state_weight,
+        design.lqi.integral_weight,
+        design.lqi.input_weight,
+        nominal.heat_transfer_w_per_k,
+        nominal.ambient_c,
+        nominal.minimum_power_w,
+        nominal.maximum_power_w,
+    )?;
+    let (lqi_state, lqi_integral) = lqi.gains();
+    let mut stability_writer =
+        ::csv::Writer::from_path(summaries.join("linear-stability-grid.csv"))?;
+    for capacity_percent in -30..=30 {
+        for heat_transfer_percent in -30..=30 {
+            let mut actual = nominal.clone();
+            actual.mass_kg *= 1.0 + capacity_percent as f64 / 100.0;
+            actual.heat_transfer_w_per_k *= 1.0 + heat_transfer_percent as f64 / 100.0;
+            let discrete = actual.discretize();
+            for (controller, radius) in [
+                (
+                    "PID",
+                    pid_radius(
+                        discrete.state_factor,
+                        discrete.input_factor,
+                        nominal.sample_period_s,
+                        design.pid.kp,
+                        design.pid.ki,
+                        design.pid.kd,
+                        design.pid.derivative_filter_s,
+                    ),
+                ),
+                (
+                    "LQR",
+                    lqr_radius(discrete.state_factor, discrete.input_factor, lqr.gain()),
+                ),
+                (
+                    "LQI",
+                    lqi_radius(
+                        discrete.state_factor,
+                        discrete.input_factor,
+                        nominal.sample_period_s,
+                        lqi_state,
+                        lqi_integral,
+                    ),
+                ),
+            ] {
+                stability_writer.serialize(StabilityRow {
+                    controller: controller.to_owned(),
+                    capacity_percent,
+                    heat_transfer_percent,
+                    spectral_radius: radius,
+                    stable: radius < 1.0,
+                })?;
+            }
+        }
+    }
+    stability_writer.flush()?;
     let nominal_text = outcomes
         .iter()
         .filter(|o| o.experiment == "nominal")

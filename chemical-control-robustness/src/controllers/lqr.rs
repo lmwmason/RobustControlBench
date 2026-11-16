@@ -2,14 +2,33 @@ use super::Controller;
 use anyhow::{Result, bail};
 use nalgebra::DMatrix;
 
+#[derive(Clone, Copy, Debug)]
+pub struct DareDiagnostics {
+    pub iterations: usize,
+    pub update_norm: f64,
+    pub residual_norm: f64,
+}
+
 pub fn solve_dare(
     a: &DMatrix<f64>,
     b: &DMatrix<f64>,
     q: &DMatrix<f64>,
     r: &DMatrix<f64>,
 ) -> Result<(DMatrix<f64>, DMatrix<f64>, f64)> {
+    let (p, gain, diagnostics) = solve_dare_with_diagnostics(a, b, q, r)?;
+    Ok((p, gain, diagnostics.residual_norm))
+}
+
+pub fn solve_dare_with_diagnostics(
+    a: &DMatrix<f64>,
+    b: &DMatrix<f64>,
+    q: &DMatrix<f64>,
+    r: &DMatrix<f64>,
+) -> Result<(DMatrix<f64>, DMatrix<f64>, DareDiagnostics)> {
     let mut p = q.clone();
-    for _ in 0..100_000 {
+    let mut final_change = f64::INFINITY;
+    let mut iterations = 0;
+    for iteration in 1..=100_000 {
         let middle = r + b.transpose() * &p * b;
         let inverse = middle
             .try_inverse()
@@ -18,9 +37,16 @@ pub fn solve_dare(
             a.transpose() * &p * a - a.transpose() * &p * b * inverse * b.transpose() * &p * a + q;
         let change = (&next - &p).norm();
         p = next;
+        final_change = change;
+        iterations = iteration;
         if change < 1.0e-13 {
             break;
         }
+    }
+    if final_change >= 1.0e-13 {
+        bail!(
+            "DARE iteration did not converge after {iterations} iterations; update norm {final_change:e}"
+        );
     }
     let gain = (r + b.transpose() * &p * b)
         .try_inverse()
@@ -28,21 +54,26 @@ pub fn solve_dare(
         * b.transpose()
         * &p
         * a;
+    let residual_inverse = (r + b.transpose() * &p * b)
+        .try_inverse()
+        .ok_or_else(|| anyhow::anyhow!("singular residual input term"))?;
     let residual_matrix = a.transpose() * &p * a
         - &p
-        - a.transpose()
-            * &p
-            * b
-            * (r + b.transpose() * &p * b).try_inverse().unwrap()
-            * b.transpose()
-            * &p
-            * a
+        - a.transpose() * &p * b * residual_inverse * b.transpose() * &p * a
         + q;
     let residual = residual_matrix.norm();
     if residual > 1.0e-8 {
         bail!("DARE residual {residual:e} exceeds tolerance");
     }
-    Ok((p, gain, residual))
+    Ok((
+        p,
+        gain,
+        DareDiagnostics {
+            iterations,
+            update_norm: final_change,
+            residual_norm: residual,
+        },
+    ))
 }
 
 #[derive(Clone, Debug)]

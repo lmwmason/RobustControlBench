@@ -1,0 +1,20 @@
+protocol_version = 2
+design_freeze = "Controller parameters in controllers.toml are fixed before evaluation."
+
+[training]
+scenarios = ["nominal_reference_step"]
+purpose = "Original engineering tuning and basic feasibility only; no test scenarios are used."
+
+[validation]
+scenarios = ["gain_scale_0.8", "gain_scale_1.2"]
+purpose = "Local tuning sensitivity; no candidate is selected from these results."
+
+[test]
+scenarios = ["capacity_grid", "heat_transfer_grid", "constant_load", "measurement_noise_100_paired_seeds", "restricted_actuator", "combined_uncertainty"]
+purpose = "Final reporting with frozen controller parameters."
+
+[hypotheses]
+h1 = "Integral-action controllers reduce post-disturbance steady-state error relative to nominal-feedforward LQR when no actuator limit prevents equilibrium."
+h2 = "Over the specified ±30% one-at-a-time grid, thermal-capacity uncertainty changes RMSE more than heat-transfer uncertainty."
+h3 = "Restricted actuator limits can change the controller ranking observed under nominal limits."
+

@@ -16,5 +16,5 @@ pub struct CombinedScenario {
     pub name: String,
     pub capacity_percent: i32,
     pub heat_transfer_percent: i32,
-    pub ambient_percent: i32,
+    pub ambient_offset_c: f64,
 }
